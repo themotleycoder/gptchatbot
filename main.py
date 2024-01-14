@@ -1,7 +1,6 @@
 import speech_recognition as sr
 import requests
 import pyttsx3
-import requests
 import json
 from config import API_KEY
 from config import KEY_WORD
@@ -59,11 +58,11 @@ def call_chatgpt_api(text):
         print("Error response:", response.text)  # Logging error response
         return f"Error: {response.status_code}, {response.text}"
     
-def call_ollama_mistral(text):
+def call_ollama(model, text):
     url = "http://localhost:11434/api/chat"
 
     payload = {
-        "model": "mistral",
+        "model": model,
         "messages": [
             {"role": "user", "content": text}
         ]
@@ -118,5 +117,7 @@ while True:
         spoken_text = spoken_text.replace(matching_phrase, "").strip()
         #pick a api to resolve the answer
         # response = call_chatgpt_api(text)
-        response = call_ollama_mistral(spoken_text)
+        response = call_ollama("mistral", spoken_text)
+        #response = call_ollama("llama2", spoken_text)
+        #response = call_ollama("llama2:13b", spoken_text)
         speak_text(response)
