@@ -10,6 +10,8 @@ from config import KEY_WORD
 recognizer = sr.Recognizer()
 tts_engine = pyttsx3.init()
 
+phrases = [KEY_WORD, "hey " + KEY_WORD, "hi " + KEY_WORD, "hello " + KEY_WORD]
+
 def listen_for_speech():
      # Use the default microphone as the audio source
     with sr.Microphone() as source:
@@ -57,6 +59,35 @@ def call_chatgpt_api(text):
         print("Error response:", response.text)  # Logging error response
         return f"Error: {response.status_code}, {response.text}"
     
+def call_ollama_mistral(text):
+    url = "http://localhost:11434/api/chat"
+
+    payload = {
+        "model": "mistral",
+        "messages": [
+            {"role": "user", "content": text}
+        ]
+    }
+
+    headers = {
+        "Content-Type": "application/json"
+    }
+
+    response = requests.post(url, data=json.dumps(payload), headers=headers)
+
+    if response.status_code == 200:
+        response_parts = response.text.split('\n')  # Splitting based on new lines
+        full_response = ''
+        for part in response_parts:
+            if part:  # Checking if the part is not empty
+                json_part = json.loads(part)  # Parsing each JSON part
+                full_response += json_part['message']['content']  # Concatenating the content
+
+        return full_response
+    else:
+        print("Error response:", response.text)  # Logging error response
+        return f"Error: {response.status_code}, {response.text}"
+    
 def speak_text(text):
     # Code to convert text to speech
     tts_engine.setProperty('voice', 'com.apple.voice.compact.en-GB.Daniel') # accent to use
@@ -68,9 +99,24 @@ def speak_text(text):
     # Wait for the speech to finish
     tts_engine.runAndWait()
 
+def starts_with(sentence):
+    for phrase in phrases:
+        if sentence and sentence.startswith(phrase):
+            return phrase
+    return None
+
 while True:
-    text = listen_for_speech()
-    if text and text.lower().startswith(KEY_WORD):
-        text = text.lower().replace(KEY_WORD, "")
-        response = call_chatgpt_api(text)
+    spoken_text = listen_for_speech()
+    if spoken_text is not None:
+        # make the text lowercase
+        spoken_text = spoken_text.lower()
+    # check if the text starts with the wake word
+    matching_phrase = starts_with(spoken_text)
+    # if the text starts with the wake word, call the chatbot API
+    if matching_phrase is not None:
+        # remove the wake word from the spoken text
+        spoken_text = spoken_text.replace(matching_phrase, "").strip()
+        #pick a api to resolve the answer
+        # response = call_chatgpt_api(text)
+        response = call_ollama_mistral(spoken_text)
         speak_text(response)
